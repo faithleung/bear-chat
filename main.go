@@ -25,7 +25,7 @@ func main() {
 	//Print log to output, very similar to fmt.Println
 	//What are the differences?
 	log.Println("starting go server")
-	
+
 	http.ListenAndServe(":80", router)
 
 }
