@@ -149,6 +149,10 @@ func signup(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if credential.Username == "" {
+		http.Error(response, "missing username", http.StatusBadRequest)
+		return
+	}
 	if findUser(credential) != -1 {
 		http.Error(response, "username already used", http.StatusBadRequest)
 		return
