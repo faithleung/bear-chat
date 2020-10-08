@@ -50,6 +50,15 @@ func printUsers(response http.ResponseWriter, request *http.Request) {
 	}
 }
 
+func findUser(credential Credentials) int {
+	for i, cred := range credentials {
+		if cred.Username == credential.Username {
+			return i
+		}
+	}
+	return -1
+}
+
 func getCookie(response http.ResponseWriter, request *http.Request) {
 
 	/*
@@ -108,6 +117,10 @@ func getJSON(response http.ResponseWriter, request *http.Request) {
 	}
 	username := credential.Username
 	password := credential.Password
+	if username == "" || password == "" {
+		http.Error(response, "missing username or password", http.StatusBadRequest)
+		return
+	}
 	fmt.Fprintf(response, username + "\n" + password)
 }
 
@@ -136,7 +149,13 @@ func signup(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if findUser(credential) != -1 {
+		http.Error(response, "username already used", http.StatusBadRequest)
+		return
+	}
 	credentials = append(credentials, credential)
+	response.WriteHeader(201)
+
 }
 
 func getIndex(response http.ResponseWriter, request *http.Request) {
@@ -166,13 +185,12 @@ func getIndex(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
-	for i, cred := range credentials {
-		if cred.Username == credential.Username {
-			fmt.Fprintf(response, strconv.Itoa(i))
-			return
-		}
+	index := findUser(credential)
+	if index == -1 {
+		http.Error(response, "credential does not exist", http.StatusBadRequest)
+		return
 	}
-	http.Error(response, "credential does not exist", http.StatusBadRequest)
+	fmt.Fprintf(response, strconv.Itoa(index))
 
 }
 
@@ -201,13 +219,12 @@ func getPassword(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
-	for _, cred := range credentials {
-		if cred.Username == credential.Username {
-			fmt.Fprintf(response, cred.Password)
-			return
-		}
+	index := findUser(credential)
+	if index == -1 {
+		http.Error(response, "credential does not exist", http.StatusBadRequest)
+		return
 	}
-	http.Error(response, "credential does not exist", http.StatusBadRequest)
+	fmt.Fprintf(response, credentials[index].Password)
 
 }
 
@@ -241,13 +258,12 @@ func updatePassword(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
-	for i, cred := range credentials {
-		if cred.Username == credential.Username {
-			credentials[i].Password = credential.Password
-			return
-		}
+	index := findUser(credential)
+	if index == -1 {
+		http.Error(response, "credential does not exist", http.StatusBadRequest)
+		return
 	}
-	credentials = append(credentials, credential)
+	credentials[index].Password = credential.Password
 
 }
 
@@ -281,14 +297,15 @@ func deleteUser(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
-	for i, cred := range credentials {
-		if cred.Username == credential.Username && cred.Password == credential.Password {
-			first := credentials[0:i]
-			second := credentials[i+1:]
-			credentials = append(first, second...)
-			return
-		}
+	index := findUser(credential)
+	if index == -1 {
+		http.Error(response, "credential does not exist", http.StatusBadRequest)
+		return
 	}
-	http.Error(response, "credential does not exist", http.StatusBadRequest)
+	if credentials[index].Password != credential.Password {
+		http.Error(response, "password is incorrect", http.StatusBadRequest)
+		return
+	}
+	credentials = append(credentials[0:index], credentials[index + 1:]...)
 
 }
